@@ -102,3 +102,7 @@ ENV/
 
 # Pycharm
 .idea/
+
+coins.json
+exchanges.json
+cache/
