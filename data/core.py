@@ -203,6 +203,16 @@ def cache(ndarray, filename):
     np.save(path, ndarray)
 
 
+def norm(matrix):
+    mean = matrix.mean(axis=0)
+    upper = matrix.max(axis=0)
+    lower = matrix.min(axis=0)
+    std = matrix.std(axis=0)
+
+    # 0 - 1 norm
+    return (matrix - lower) / (upper - lower)
+
+
 def create_dataset(candlesticks, window_size, *indicators):
     data_size = len(candlesticks)
     # check if all the extra indicators share the same data length
@@ -219,6 +229,8 @@ def create_dataset(candlesticks, window_size, *indicators):
             main_vector = np.append(main_vector, val)
         flat_data.append(main_vector)
 
+    flat_data = np.array(flat_data)
+    flat_data = norm(flat_data)
     # stack every <window_size> data together to form a matrix
     # representing the change over <window_size> hours
     for i in range(window_size, data_size):

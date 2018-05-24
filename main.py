@@ -38,6 +38,7 @@ if __name__ == '__main__':
     """************ load data from cache files ***********"""
     x = np.load(os.path.join(CACHE_ROOT, 'x_train.npy'))
     y = np.load(os.path.join(CACHE_ROOT, 'y_train.npy'))
+    """***************** END *****************"""
 
     model = single_price_model(x.shape, 1024, .5)
     train_history = model.fit(x, y, epochs=10, batch_size=128, shuffle=False)
