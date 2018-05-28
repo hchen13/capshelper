@@ -22,6 +22,9 @@ class Coin(Base):
 
     candlesticks = relationship('Candlestick', back_populates='coin')
 
+    def __repr__(self):
+        return "{} ({})".format(self.fullname, self.symbol)
+
 
 class Candlestick(Base):
     __tablename__ = 'candlestick'

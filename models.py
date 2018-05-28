@@ -29,3 +29,19 @@ def single_price_model(input_shape, feature_size, keep_prob):
     return model
 
 
+def future_range_model(input_shape, feature_size, keep_prob):
+    inputs = Input(shape=input_shape[1:])
+
+    lstm_1 = LSTM(feature_size, return_sequences=True)(inputs)
+    drop_1 = Dropout(keep_prob)(lstm_1)
+
+    lstm_2 = LSTM(feature_size, return_sequences=False)(drop_1)
+    drop_2 = Dropout(keep_prob)(lstm_2)
+
+    dense_1 = Dense(32, kernel_initializer='uniform', activation='relu')(drop_2)
+    outputs = Dense(2, kernel_initializer='uniform', activation='linear')(dense_1)
+
+    model = Model(inputs=inputs, outputs=outputs)
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    model.summary()
+    return model

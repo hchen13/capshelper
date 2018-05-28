@@ -23,13 +23,13 @@ def display_volume(symbol, start, end):
     plt.show()
 
 
-def display(symbol, start, end):
+def display(symbol, start=None, end=None):
     dataset = load_candlesticks(symbol, start, end)
     x = [cs.time for cs in dataset]
     p = [cs.close for cs in dataset]
     v = [cs.volume for cs in dataset]
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [4, 1]})
 
     ax1.set_ylabel('Closing Price ($)', fontsize=8)
     ax2.set_ylabel('Volume ($)', fontsize=8)

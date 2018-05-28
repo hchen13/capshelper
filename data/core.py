@@ -7,7 +7,6 @@ from data.db import init_db, Coin, Candlestick
 from settings import *
 from data.analysis import *
 
-
 Session = init_db()
 
 
@@ -122,9 +121,7 @@ def save_candles(symbol, data, bench):
 
     symbol = symbol.upper()
     session = Session()
-
     added = 0
-
     for i, raw in enumerate(data):
 
         if i % 100 == 0:
@@ -171,30 +168,13 @@ def load_candlesticks(symbol, start=None, end=None):
     return queryset.all()
 
 
-def load_matrix(symbol, start=None, end=None):
-    if start is None:
-        start = datetime.datetime(2011, 1, 1, 0, 0)
-    if end is None:
-        end = datetime.datetime.now()
-    candles = load_candlesticks(symbol, start, end)
-    mat = np.array([cs.as_vector() for cs in candles])
-    return mat
-
-
-def load_dataset(symbol, window_size=72, start=None, end=None):
-    candles = load_candlesticks(symbol, start, end)
-    size = len(candles)
-    x = []
-    y = []
-    for i in range(window_size, size):
-        batch = candles[i - window_size : i]
-        label = candles[i].as_vector()
-        data = [cs.as_vector() for cs in batch]
-        x.append(data)
-        y.append(label)
-    x = np.array(x)
-    y = np.array(y)
-    return x, y
+def list_coins():
+    """List all the known coins
+    :return: List[Coin()]
+    """
+    session = Session()
+    queryset = session.query(Coin).all()
+    return queryset
 
 
 def cache(ndarray, filename):
@@ -204,23 +184,22 @@ def cache(ndarray, filename):
 
 
 def norm(matrix):
-    mean = matrix.mean(axis=0)
+    # mean = matrix.mean(axis=0)
+    # std = matrix.std(axis=0)
     upper = matrix.max(axis=0)
     lower = matrix.min(axis=0)
-    std = matrix.std(axis=0)
-
     # 0 - 1 norm
-    return (matrix - lower) / (upper - lower)
+    matrix_norm = (matrix - lower) / (upper - lower)
+    return matrix_norm, upper, lower
 
 
-def create_dataset(candlesticks, window_size, *indicators):
+def stack_data(candlesticks, *indicators):
     data_size = len(candlesticks)
     # check if all the extra indicators share the same data length
     for indicator in indicators:
         assert len(indicator) == data_size
 
     flat_data = []
-    x, y = [], []
     for i in range(data_size):
         candle = candlesticks[i]
         main_vector = candle.as_vector()
@@ -228,40 +207,4 @@ def create_dataset(candlesticks, window_size, *indicators):
             val = indicator[i]
             main_vector = np.append(main_vector, val)
         flat_data.append(main_vector)
-
-    flat_data = np.array(flat_data)
-    flat_data = norm(flat_data)
-    # stack every <window_size> data together to form a matrix
-    # representing the change over <window_size> hours
-    for i in range(window_size, data_size):
-        batch = flat_data[i - window_size : i]
-        label = flat_data[i]
-        x.append(batch)
-        y.append(label)
-
-    x = np.array(x)
-    y = np.array(y)
-
-    return x, y
-
-
-if __name__ == '__main__':
-    # update_recent_candles('btc', batch_size=2000)
-
-    candles = load_candlesticks('btc', start=datetime.datetime(2018, 4, 1, 0, 0))
-    prices = [cs.close for cs in candles]
-    ma5 = calculate_moving_averages(prices, n=5)
-    std5 = calculate_moving_std(prices, n=20)
-    bb_upper, bb_lower, pb, bw = calculate_bollinger_bands(prices, n=20, k=2)
-    ema5 = calculate_exponentially_moving_averages(prices, n=5)
-    macd, macd_signal, macd_diff = calculate_MACD(prices)
-    ema10 = calculate_exponentially_moving_averages(prices, n=10)
-
-
-    timeline = [cs.time for cs in candles]
-
-    from matplotlib import pyplot as plt
-
-    plt.figure(figsize=(21, 3))
-    plt.plot(timeline, prices, 'k')
-    plt.show()
+    return np.array(flat_data)
