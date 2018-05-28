@@ -42,13 +42,11 @@ def prepare_data(*symbols):
         x_valid = np.concatenate((x_valid, x_valid_batch), axis=0) if x_valid is not None else x_valid_batch
         y_valid = np.concatenate((y_valid, y_valid_batch), axis=0) if y_valid is not None else y_valid_batch
 
-    print(x_train.shape, y_train.shape)
-    print(x_valid.shape, y_valid.shape)
 
     cache(x_train, 'x_train')
     cache(y_train, 'y_train')
-    cache(x_valid, 'x_test')
-    cache(y_valid, 'y_test')
+    cache(x_valid, 'x_valid')
+    cache(y_valid, 'y_valid')
 
 
 if __name__ == '__main__':
@@ -58,13 +56,14 @@ if __name__ == '__main__':
     # prepare_data('eos', 'soc', 'btc', 'eth')
 
 
-    # """************ load data from cache files ***********"""
+    """************ load data from cache files ***********"""
     x = np.load(os.path.join(CACHE_ROOT, 'x_train.npy'))
     y = np.load(os.path.join(CACHE_ROOT, 'y_train.npy'))
-    # """***************** END *****************"""
+    """***************** END *****************"""
+
     #
-    model = future_range_model(x.shape, 1024, .5)
-    # train_history = model.fit(x, y, epochs=10, batch_size=128, shuffle=False)
+    model = future_range_model(x.shape, 64, .5)
+    train_history = model.fit(x, y, epochs=1, batch_size=128, shuffle=True)
     #
     # x_ = np.load(os.path.join(CACHE_ROOT, 'x_test.npy'))
     # y_ = np.load(os.path.join(CACHE_ROOT, 'y_test.npy'))
