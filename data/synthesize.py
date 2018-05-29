@@ -30,16 +30,30 @@ def history2future(flat_data, history_size, future_size=1):
     return np.array(x), np.array(y)
 
 
-def synthesize_past_future_dataset(history, future):
-    # [0, 1] normalization
+def batch_normalize(history, future):
+    """
+    batch normalize the history matrices into [0, 1] and use same params
+    to normalize the future matrices, not necessarily in [0, 1]
+    :param history: the history array of shape (m, history_size, n)
+    :param future:  the future array of shape (m, future_size, n)
+    :return: normalized history x and future y, along with upper and lower for denorm
+    """
     upper = history.max(axis=1, keepdims=True)
     lower = history.min(axis=1, keepdims=True)
     x = (history - lower) / (upper - lower + 1e-8)
-    future_norm = (future - lower) / (upper - lower + 1e-8)
+    y = (future - lower) / (upper - lower + 1e-8)
+    return x, y, upper, lower
 
-    closing_prices = future_norm[:, :, 3]
+
+def get_price_range(array):
+    closing_prices = array[:, :, 3]
     peaks = closing_prices.max(axis=1, keepdims=True)
     valleys = closing_prices.min(axis=1, keepdims=True)
     y = np.hstack((peaks, valleys))
+    return y
 
-    return x, y
+
+def get_direction(past, future):
+    base_price = past[:, -1, 3]
+    last_price = future[:, -1, 3]
+    return np.reshape(last_price - base_price, (-1, 1))

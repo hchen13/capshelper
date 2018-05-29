@@ -1,5 +1,5 @@
 from keras import Sequential, Model, Input
-from keras.layers import LSTM, Dropout, Dense
+from keras.layers import LSTM, Dropout, Dense, concatenate
 
 
 def single_price_model(input_shape, feature_size, keep_prob):
@@ -45,3 +45,28 @@ def future_range_model(input_shape, feature_size, keep_prob):
     model.compile(optimizer='adam', loss='mse', metrics=['mae'])
     model.summary()
     return model
+
+
+def future_range_momentum_model(input_shape, lstm_neurons, keep_prob):
+    inputs = Input(shape=input_shape[1:])
+
+    lstm = LSTM(lstm_neurons, return_sequences=True)(inputs)
+    drop = Dropout(keep_prob)(lstm)
+
+    lstm = LSTM(lstm_neurons, return_sequences=False)(drop)
+    drop = Dropout(keep_prob)(lstm)
+
+    dense = Dense(32, kernel_initializer='uniform', activation='relu')(drop)
+
+    direction = Dense(1, activation='sigmoid')(dense)
+    magnitude = Dense(1, activation='linear')(dense)
+    momentum_input = concatenate([direction, magnitude])
+    momentum = Dense(1, activation='linear', name='momentum')(momentum_input)
+
+    range = Dense(2, kernel_initializer='uniform', activation='linear', name='range')(dense)
+
+    model = Model(inputs=inputs, outputs=[range, momentum])
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    model.summary()
+    return model
+

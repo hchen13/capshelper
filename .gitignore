@@ -106,3 +106,5 @@ ENV/
 coins.json
 exchanges.json
 cache/
+assets/
+.DS_Store
