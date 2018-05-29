@@ -1,6 +1,6 @@
 from keras import Sequential, Model, Input
 from keras.layers import LSTM, Dropout, Dense, concatenate
-
+from keras import backend as K
 
 def single_price_model(input_shape, feature_size, keep_prob):
     """
@@ -48,6 +48,14 @@ def future_range_model(input_shape, feature_size, keep_prob):
 
 
 def future_range_momentum_model(input_shape, lstm_neurons, keep_prob):
+
+    def directional_regression_loss(y, y_hat):
+        diff = (y - y_hat) ** 2
+        prod = y * y_hat + 1e-10
+        cost = diff / K.exp(prod / K.abs(prod) - 1)
+        loss = K.mean(cost)
+        return loss
+
     inputs = Input(shape=input_shape[1:])
 
     lstm = LSTM(lstm_neurons, return_sequences=True)(inputs)
@@ -66,7 +74,7 @@ def future_range_momentum_model(input_shape, lstm_neurons, keep_prob):
     range = Dense(2, kernel_initializer='uniform', activation='linear', name='range')(dense)
 
     model = Model(inputs=inputs, outputs=[range, momentum])
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    model.compile(optimizer='adam', loss=['mse', directional_regression_loss], metrics=['mae'])
     model.summary()
     return model
 
