@@ -178,6 +178,7 @@ def list_coins():
 
 
 def cache(ndarray, filename):
+    print("Caching array {} into file: {}".format(ndarray.shape, filename))
     path = os.path.join(CACHE_ROOT, filename)
     ensure_dir_exists(CACHE_ROOT)
     np.save(path, ndarray)

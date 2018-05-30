@@ -57,3 +57,8 @@ def get_direction(past, future):
     base_price = past[:, -1, 3]
     last_price = future[:, -1, 3]
     return np.reshape(last_price - base_price, (-1, 1))
+
+
+def get_closing_price(future):
+    prices = future[:, -1, [3]]
+    return prices

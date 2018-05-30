@@ -49,7 +49,7 @@ def future_range_direction_model(input_shape, lstm_neurons, keep_prob):
     return model
 
 
-def next_direction_model(input_shape, lstm_neurons, keep_prob):
+def next_price_direction_model(input_shape, lstm_neurons, keep_prob):
     inputs = Input(shape=input_shape[1:])
 
     lstm = LSTM(lstm_neurons, return_sequences=True)(inputs)
@@ -60,8 +60,9 @@ def next_direction_model(input_shape, lstm_neurons, keep_prob):
 
     dense = Dense(32, kernel_initializer='uniform', activation='relu')(drop)
 
+    price = Dense(1, activation='linear', name='price')(dense)
     direction = Dense(1, activation='sigmoid', name='direction')(dense)
 
-    model = Model(inputs=inputs, outputs=direction)
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+    model = Model(inputs=inputs, outputs=[price, direction])
+    model.compile(optimizer='adam', loss=['mse', 'binary_crossentropy'], metrics=['mae', 'acc'])
     return model
