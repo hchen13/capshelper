@@ -73,11 +73,10 @@ if __name__ == '__main__':
     """***************** END *****************"""
 
     y_range = y[:, 0:2]
-    y_momentum = y[:, 2]
+    y_direction = y[:, 2] > 0
 
-    model = future_range_momentum_model(x.shape, 128, .2)
-    train_history = model.fit(x, [y_range, y_momentum], epochs=1, batch_size=128, shuffle=True)
-    #
+    model = future_range_direction_model(x.shape, 128, .2)
+    train_history = model.fit(x, [y_range, y_direction], epochs=1, batch_size=128, shuffle=True)
 
     # model = load_model('assets/未来6小时区间模型.h5')
     # model.summary()

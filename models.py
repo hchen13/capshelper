@@ -78,3 +78,22 @@ def future_range_momentum_model(input_shape, lstm_neurons, keep_prob):
     model.summary()
     return model
 
+
+def future_range_direction_model(input_shape, lstm_neurons, keep_prob):
+    inputs = Input(shape=input_shape[1:])
+
+    lstm = LSTM(lstm_neurons, return_sequences=True)(inputs)
+    drop = Dropout(keep_prob)(lstm)
+
+    lstm = LSTM(lstm_neurons, return_sequences=False)(drop)
+    drop = Dropout(keep_prob)(lstm)
+
+    dense = Dense(32, kernel_initializer='uniform', activation='relu')(drop)
+
+    range = Dense(2, kernel_initializer='uniform', activation='linear', name='range')(dense)
+    direction = Dense(1, activation='sigmoid', name='direction')(dense)
+
+    model = Model(inputs=inputs, outputs=[range, direction])
+    model.compile(optimizer='adam', loss=['mse', 'binary_crossentropy'], metrics=['mae', 'acc'])
+    model.summary()
+    return model
