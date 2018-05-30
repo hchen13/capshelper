@@ -14,13 +14,14 @@ from matplotlib import pyplot as plt
 
 def synthesize_features(symbol, start, end):
     candles = load_candlesticks(symbol, start, end)
+
     prices = [cs.close for cs in candles]
     macd, macd_signal, macd_diff = calculate_MACD(prices)
-    # bb_upper, bb_lower, percent_b, bandwidth = calculate_bollinger_bands(prices, n=12)
     ma12 = calculate_moving_averages(prices, n=12)
     ma24 = calculate_moving_averages(prices, n=24)
     ma7d = calculate_moving_averages(prices, n=24 * 7)
     flat_data = stack_data(candles, macd, macd_signal, macd_diff, ma12, ma24, ma7d)
+
     return flat_data
 
 
@@ -35,7 +36,8 @@ def prepare_data(*symbols):
         print("Preparing datasets for {}...".format(symbol))
         train = synthesize_features(symbol, start, end)
 
-        hist_train, fut_train = history2future(train, history_size=72, future_size=6)
+        hist_train, fut_train = history2future(train, history_size=72, future_size=1)
+        print(hist_train.shape, fut_train.shape)
         hist_train, fut_train, _, _ = batch_normalize(hist_train, fut_train)
         price_range_train = get_price_range(fut_train)
         direction_train = get_direction(hist_train, fut_train)
@@ -44,7 +46,7 @@ def prepare_data(*symbols):
         y_train = target_train if y_train is None else np.concatenate((y_train, target_train))
 
         valid = synthesize_features(symbol, end, today)
-        hist_valid, fut_valid = history2future(valid, history_size=72, future_size=6)
+        hist_valid, fut_valid = history2future(valid, history_size=72, future_size=1)
         hist_valid, fut_valid, _, _ = batch_normalize(hist_valid, fut_valid)
         price_range_valid = get_price_range(fut_valid)
         direction_valid = get_direction(hist_valid, fut_valid)
@@ -62,8 +64,9 @@ if __name__ == '__main__':
 
     symbols = ['eos', 'soc', 'btc', 'eth']
 
-    # update_recent_candles('btc', batch_size=2000)
-    # scrape_candles('soc', batch_size=2000)
+    # for symbol in symbols:
+    #     update_recent_candles(symbol, batch_size=2000)
+
     # prepare_data(*symbols)
 
 
@@ -72,11 +75,18 @@ if __name__ == '__main__':
     y = np.load(os.path.join(CACHE_ROOT, 'y_train.npy'))
     """***************** END *****************"""
 
-    y_range = y[:, 0:2]
     y_direction = y[:, 2] > 0
 
-    model = future_range_direction_model(x.shape, 128, .2)
-    train_history = model.fit(x, [y_range, y_direction], epochs=1, batch_size=128, shuffle=True)
-
-    # model = load_model('assets/未来6小时区间模型.h5')
-    # model.summary()
+    model = next_direction_model(x.shape, 128, .2)
+    train_history = model.fit(x, y_direction, epochs=1, batch_size=128, shuffle=True)
+    # #
+    x_ = np.load(os.path.join(CACHE_ROOT, 'x_valid.npy'))
+    y_ = np.load(os.path.join(CACHE_ROOT, 'y_valid.npy'))
+    true_direction = y_[:, 2] > 0
+    #
+    print("input shape: ", x_.shape)
+    print("target shape:", true_direction.shape)
+    #
+    performance = model.evaluate(x_, true_direction)
+    for i, metric in enumerate(model.metrics_names):
+        print("{}: {:.4f}".format(metric, performance[i]))
