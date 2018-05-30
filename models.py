@@ -66,3 +66,22 @@ def next_price_direction_model(input_shape, lstm_neurons, keep_prob):
     model = Model(inputs=inputs, outputs=[price, direction])
     model.compile(optimizer='adam', loss=['mse', 'binary_crossentropy'], metrics=['mae', 'acc'])
     return model
+
+
+def next_candle_model(input_shape, lstm_neurons, keep_prob):
+    inputs = Input(shape=input_shape[1:])
+
+    lstm = LSTM(lstm_neurons, return_sequences=True)(inputs)
+    drop = Dropout(keep_prob)(lstm)
+
+    lstm = LSTM(lstm_neurons, return_sequences=False)(drop)
+    drop = Dropout(keep_prob)(lstm)
+
+    dense = Dense(32, kernel_initializer='uniform', activation='relu')(drop)
+
+    candle = Dense(5, activation='linear', name='candle')(dense)
+
+    model = Model(inputs=inputs, outputs=candle)
+    model.compile(optimizer='adam', loss='mse', metrics=['mae', 'mse'])
+    model.summary()
+    return model
