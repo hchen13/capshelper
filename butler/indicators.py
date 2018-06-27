@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def calculate_moving_averages(array, n=5):
+def sma(array, n=5):
     """
     Calculate the simple moving averages (SMA)
 
@@ -9,14 +9,59 @@ def calculate_moving_averages(array, n=5):
     :param n: the average period
     :return: the corresponding SMA which has the same length of the input array
     """
-    ma = []
+    ma = np.zeros(shape=(len(array), ))
     for i, val in enumerate(array):
         batch = array[max(i - n + 1, 0): i + 1]
-        ma.append(np.mean(batch))
+        # ma.append(np.mean(batch))
+        ma[i] = np.mean(batch)
     return ma
 
 
-def calculate_moving_std(array, n=5):
+def ema(array, n=5):
+    """
+    Calculate the exponentially weighted averages (a.k.a. EMA) for a given array:
+    v_t = beta * v_{t-1} + (1 - beta) * a_t
+
+    (deprecated)
+    The problem with the above equation is that the EMA will start off with very
+    small numbers in the beginning, adding bias correction will solve this problem:
+    v_t = v_t / (1 - beta ^ t)
+
+    :param array: the price array given in form of a python list of floating numbers
+    :param n: the period considered
+    :return: the EMA
+    """
+    beta = 1 - 2 / (n + 1)
+    ma = np.zeros(shape=(len(array),))
+    for i, val in enumerate(array):
+        if i == 0:
+            ma[i] = val
+            continue
+        previous = ma[i - 1]
+        current = beta * previous + (1 - beta) * val
+        ma[i] = current
+    return ma
+
+
+def macd(array, a=12, b=26, c=9):
+    """
+    Calculates the MACD, MACD signal, and their differences (histogram)
+
+    :param array: the price array represented as python list
+    :param a: fast period length
+    :param b: slow period length
+    :param c: the average period length of the MACD itself
+    :return: MACD, signal, and their difference
+    """
+    fast = ema(array, a)
+    slow = ema(array, b)
+    proper = fast - slow
+    signal = ema(proper, c)
+    diff = proper - signal
+    return proper, signal, diff
+
+
+def moving_std(array, n=5):
     """
     Calculate the moving standard deviation with a given sliding window
 
@@ -31,18 +76,7 @@ def calculate_moving_std(array, n=5):
     return std
 
 
-"""The Squeeze
-    The squeeze is the central concept of Bollinger Bands®. When the bands come close 
-    together, constricting the moving average, it is called a squeeze. A squeeze signals 
-    a period of low volatility and is considered by traders to be a potential sign of 
-    future increased volatility and possible trading opportunities. Conversely, the 
-    wider apart the bands move, the more likely the chance of a decrease in volatility 
-    and the greater the possibility of exiting a trade. However, these conditions are 
-    not trading signals. The bands give no indication when the change may take place or 
-    which direction price could move.
-
-"""
-def calculate_bollinger_bands(array, n=20, k=2):
+def bbands(array, n=20, k=2):
     """
     Calculate the bollinger band and its derived indicators for a given price array
 
@@ -51,8 +85,8 @@ def calculate_bollinger_bands(array, n=20, k=2):
     :param k: the ± standard deviation bound range
     :return: the band upper bound, lower bound, %b indicator, and bandwidth
     """
-    ma = calculate_moving_averages(array, n)
-    std = calculate_moving_std(array, n)
+    ma = sma(array, n)
+    std = moving_std(array, n)
     ma = np.array(ma)
     std = np.array(std)
 
@@ -64,30 +98,8 @@ def calculate_bollinger_bands(array, n=20, k=2):
     return upper, lower, percent_b, bandwidth
 
 
-def calculate_exponentially_moving_averages(array, n=5):
-    """
-    Calculate the exponentially weighted averages (a.k.a. EMA) for a given array:
-    v_t = beta * v_{t-1} + (1 - beta) * a_t
-
-    (deprecated)
-    The problem with the above equation is that the EMA will start off with very 
-    small numbers in the beginning, adding bias correction will solve this problem:
-    v_t = v_t / (1 - beta ^ t)
-
-    :param array: the price array given in form of a python list of floating numbers
-    :param n: the period considered
-    :return: the EMA
-    """
-    beta = 1 - 1 / n
-    ema = []
-    for i, val in enumerate(array):
-        if i == 0:
-            ema.append(val)
-            continue
-        previous = ema[i - 1]
-        current = beta * previous + (1 - beta) * val
-        ema.append(current)
-    return ema
+# aliases
+ma = sma
 
 
 """Break down of the MACD chart:
@@ -111,21 +123,15 @@ def calculate_exponentially_moving_averages(array, n=5):
     with the Relative Strength Index (RSI) or other technical indicators to verify overbought
     or oversold conditions.
 """
-def calculate_MACD(array, a=12, b=26, c=9):
-    """
-    Calculates the MACD, MACD signal, and their difference (histogram)
 
-    :param array: the price array represented as python list
-    :param a: fast period length
-    :param b: slow period length
-    :param c: the average period length of the MACD itself
-    :return: MACD, signal, and their difference
-    """
-    ma_fast = calculate_exponentially_moving_averages(array, a)
-    ma_slow = calculate_exponentially_moving_averages(array, b)
-    ma_fast = np.array(ma_fast)
-    ma_slow = np.array(ma_slow)
-    macd = ma_fast - ma_slow
-    signal = calculate_exponentially_moving_averages(macd, c)
-    diff = macd - signal
-    return list(macd), signal, diff
+"""The Squeeze
+    The squeeze is the central concept of Bollinger Bands®. When the bands come close 
+    together, constricting the moving average, it is called a squeeze. A squeeze signals 
+    a period of low volatility and is considered by traders to be a potential sign of 
+    future increased volatility and possible trading opportunities. Conversely, the 
+    wider apart the bands move, the more likely the chance of a decrease in volatility 
+    and the greater the possibility of exiting a trade. However, these conditions are 
+    not trading signals. The bands give no indication when the change may take place or 
+    which direction price could move.
+
+"""
