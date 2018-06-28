@@ -91,7 +91,7 @@ candlesticks = downloader.get_candlesticks('btc', 'usdt', start=start_timestamp,
 # the method returns an integer indicating how many of the candlesticks are actually saved as rows in the database
 added = butler.save_candlesticks(candlesticks)
 ```
-1. update the above indicators
+3. update candlesticks with calculated indicators
 ```Python
 butler.update_indicators('btc', 'usdt')
 ```
