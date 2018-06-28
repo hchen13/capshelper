@@ -52,7 +52,7 @@ class Candlestick(Base):
         return v
 
     def to_representation(self):
-        return {c.name: _json_repr(getattr(self, c.name)) for c in self.__table__.columns }
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns }
 
 
 def init_db(host, name, user, pwd):

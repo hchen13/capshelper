@@ -1,9 +1,13 @@
+import os
+import sys
 from datetime import datetime, timedelta
 
 from pandas import DataFrame
+from sqlalchemy import desc
 
 from butler.db import *
 from butler.indicators import *
+from settings import ensure_dir_exists
 
 DEFAULT_DATABASE = {
     'host': "localhost",
@@ -37,7 +41,6 @@ class _Butler:
                 return False
         return True
 
-
     def valid_candlestick(self, data):
         """Validate the candlestick data and identify valid ones
 
@@ -68,6 +71,7 @@ class _Butler:
         """
         session = self.Session()
         added = 0
+        updated = 0
         print("Saving candlestick data into database...")
         for i, obj in enumerate(data):
             progress = i / len(data) * 100
@@ -87,9 +91,11 @@ class _Butler:
                 added += 1
             else:
                 queryset.update(obj)
+                updated += 1
         print("Progress: 100%")
         session.commit()
         print("Saving complete! {} new records saved.\n".format(added))
+        return added
 
     def retrieve_candlesticks(self, base, counter, start=None, end=None):
         """Retrieve candlestick data from the database
@@ -101,8 +107,8 @@ class _Butler:
         :return: List of candlesticks
         """
         print("Retrieving data from the database...")
-        base = base.lower()
-        counter = counter.lower()
+        base = base.upper()
+        counter = counter.upper()
         session = self.Session()
 
         queryset = session.query(Candlestick).filter(
@@ -148,10 +154,12 @@ class _Butler:
             progress = i / len(candlesticks) * 100
             if progress % 10 - 0 < 1e-2:
                 print("Progress: {:.2f}%".format(progress))
+            if candle['ma1'] is not None:
+                continue
             id = int(candle['id'])
-            candle = session.query(Candlestick).filter(Candlestick.id == id).one()
+            new_candle = session.query(Candlestick).filter(Candlestick.id == id).one()
             update_db_instance(
-                candle, ma6[i], ma12[i], ma24[i],
+                new_candle, ma6[i], ma12[i], ma24[i],
                 macd_proper[i], macd_signal[i], macd_diff[i]
             )
         print("Progress: 100%")
@@ -162,8 +170,8 @@ class _Butler:
         df = DataFrame(candlesticks)
         return df.drop(columns=['id', 'base', 'counter', 'time'])
 
-    def generate_past_future_pair(self, base, counter, past_length=72, future_length=12):
-        candlesticks = self.retrieve_candlesticks(base, counter)
+    def generate_past_future_pair(self, candlesticks, past_length=72, future_length=12, norm=True):
+        # candlesticks = self.retrieve_candlesticks(base, counter)
         df = self.as_dataframe(candlesticks)
         data_size = len(df)
         x, y = [], []
@@ -171,11 +179,13 @@ class _Butler:
         for i in range(data_size - window_size + 1):
             inputs = df.iloc[i : i + past_length]
             outputs = df.iloc[i + past_length : i + window_size]
+            if norm:
+                inputs, outputs = self.normalize_pair(inputs, outputs)
             x.append(inputs)
             y.append(outputs)
         return x, y
 
-    def normalize(self, past, future):
+    def normalize_pair(self, past, future):
         import pandas as pd
         merged = pd.concat([past, future])
 
@@ -203,3 +213,25 @@ class _Butler:
         x = merged.iloc[:len(past)]
         y = merged.iloc[len(past):]
         return x, y
+
+    def as_train_data(self, past, future):
+        mat_past = [p.values for p in past]
+        mat_future = [f.values for f in future]
+        inputs = np.array(mat_past)
+        outputs = np.array(mat_future)
+        return inputs, outputs
+
+    def cache(self, tensor, path):
+        ensure_dir_exists(os.path.dirname(path))
+        np.save(path, tensor)
+
+    def latest_timestamp(self, base, counter):
+        session = self.Session()
+        latest = session.query(Candlestick).filter(
+            Candlestick.base == base,
+            Candlestick.counter == counter
+        ).order_by(desc(Candlestick.timestamp)).first()
+        if latest is None:
+            sys.stderr.write("No {}/{} data in the database\n".format(base, counter))
+            return None
+        return latest.timestamp

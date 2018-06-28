@@ -6,8 +6,9 @@ import requests
 
 
 def _http_get(url, params=None):
-    encoded = urlencode(params if params else {})
+    params = params if params else {}
     params['extraParams'] = 'CAPS'
+    encoded = urlencode(params)
     try:
         response = requests.get(url, encoded, timeout=10)
     except BaseException as e:
