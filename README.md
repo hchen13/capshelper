@@ -98,7 +98,7 @@ butler.update_indicators('btc', 'usdt')
 
 ### Scripts
 
-The [app.py](./listener.py) script contains several tasks enclosed in the functions. 
+The [app.py](./app.py) script contains several tasks enclosed in the functions.
 
 #### get_watchlist
 
