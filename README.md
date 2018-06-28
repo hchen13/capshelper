@@ -27,7 +27,7 @@ end_timestamp = datetime(2018, 6, 1, 23, 59).timestamp()
 candlesticks = downloader.get_candlesticks('btc', 'usdt', start=start_timestamp, end=end_timestamp)
 ```
 
-### Butler
+### BUTLER
 
 The module manages the database that stores candlesticks data, it also provides a user interface class ```Butler```. Data downloaded using ```Downloader``` module can be fed into ```Butler``` for saving into database. Or retrieving candlesticks from the database. Plase note that the Butler **only supports MySQL** database system. 
 
