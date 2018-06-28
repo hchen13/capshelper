@@ -13,7 +13,7 @@ DEFAULT_DATABASE = {
     'host': "localhost",
     'name': "cccagg",
     "user": 'root',
-    'pwd': 'root'
+    'pwd': 'wocaonima'
 }
 
 
