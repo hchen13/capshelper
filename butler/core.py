@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 
+import pandas as pd
 from pandas import DataFrame
 from sqlalchemy import desc
 
@@ -13,7 +14,7 @@ DEFAULT_DATABASE = {
     'host': "localhost",
     'name': "cccagg",
     "user": 'root',
-    'pwd': 'wocaonima'
+    'pwd': 'root'
 }
 
 
@@ -28,6 +29,13 @@ class _Butler:
         self.Session = init_db(**db_configs)
 
     def check_db_integrity(self, base, counter):
+        """Checks the data integrity of a given coin pair. False when candlesticks are not hourly coherent
+        or indicators not calculated
+
+        :param base: base coin
+        :param counter: counter coin
+        :return: boolean, indicating whether the pair is in good shape
+        """
         standard = timedelta(hours=1)
         candles = self.retrieve_candlesticks(base, counter)
         for i, c in enumerate(candles):
@@ -39,7 +47,31 @@ class _Butler:
             delta = t1 - t0
             if standard.total_seconds() != delta:
                 return False
+            if c['ma1'] is None:
+                return False
         return True
+
+    def all_pairs(self):
+        """Summarize all the existing coin pairs and the number of corresponding
+        candlesticks data currently stored in the database
+
+        :return:
+        """
+        session = self.Session()
+        pairs = session.query(Candlestick.base, Candlestick.counter).distinct().all()
+        results = []
+        for base, counter in pairs:
+            count = session.query(Candlestick).filter(
+                Candlestick.base == base,
+                Candlestick.counter == counter
+            ).count()
+            obj = {
+                'pair': (base, counter),
+                'count': count
+            }
+            results.append(obj)
+        return sorted(results, key=lambda x: x['count'], reverse=True)
+
 
     def valid_candlestick(self, data):
         """Validate the candlestick data and identify valid ones
@@ -171,22 +203,27 @@ class _Butler:
         return df.drop(columns=['id', 'base', 'counter', 'time'])
 
     def generate_past_future_pair(self, candlesticks, past_length=72, future_length=12, norm=True):
-        # candlesticks = self.retrieve_candlesticks(base, counter)
+        print("Creating past({})-future({}) pairs from given candlesticks...".format(past_length, future_length))
         df = self.as_dataframe(candlesticks)
         data_size = len(df)
         x, y = [], []
         window_size = past_length + future_length
         for i in range(data_size - window_size + 1):
+
+            progress = (i + 1) / (data_size - window_size + 1) * 100
+            if int(progress) % 20 == 0 and progress - int(progress) < 1e-2:
+                print("Progress: {:.2f}%".format(progress))
+
             inputs = df.iloc[i : i + past_length]
             outputs = df.iloc[i + past_length : i + window_size]
             if norm:
                 inputs, outputs = self.normalize_pair(inputs, outputs)
             x.append(inputs)
             y.append(outputs)
+        print("Creation complete!\n")
         return x, y
 
     def normalize_pair(self, past, future):
-        import pandas as pd
         merged = pd.concat([past, future])
 
         mean = merged['close'].mean()
@@ -217,12 +254,11 @@ class _Butler:
     def as_train_data(self, past, future):
         mat_past = [p.values for p in past]
         mat_future = [f.values for f in future]
-        inputs = np.array(mat_past)
-        outputs = np.array(mat_future)
-        return inputs, outputs
+        return mat_past, mat_future
 
     def cache(self, tensor, path):
         ensure_dir_exists(os.path.dirname(path))
+        print("Caching data or shape {}...".format(tensor.shape))
         np.save(path, tensor)
 
     def latest_timestamp(self, base, counter):
@@ -235,3 +271,22 @@ class _Butler:
             sys.stderr.write("No {}/{} data in the database\n".format(base, counter))
             return None
         return latest.timestamp
+
+    def generate_train_files(self, path, suffix, start=None, end=None):
+        pairs = self.all_pairs()
+        total_count = 0
+        x, y = [], []
+        for i in pairs:
+            if total_count > 1_000_000:
+                break
+            total_count += i['count']
+            base, counter = i['pair']
+            candlesticks = self.retrieve_candlesticks(base, counter, start, end)
+            past, future = self.generate_past_future_pair(candlesticks, 72, 12, norm=True)
+            inputs, outputs = self.as_train_data(past, future)
+            x += inputs
+            y += outputs
+        x = np.array(x)
+        y = np.array(y)
+        self.cache(x, os.path.join(path, 'x_{}.npy'.format(suffix)))
+        self.cache(y, os.path.join(path, 'y_{}.npy'.format(suffix)))

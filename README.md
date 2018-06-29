@@ -1,4 +1,4 @@
-# CAPS Helper (still in development)
+# CAPS Helper (still under development)
 
 This project acts as a helper module which aims at preparing cryptocurrency data used for the other project called "[CAPS](https://github.com/hchen13/caps.git)" in neural network training and predicting. 
 
@@ -108,3 +108,6 @@ This function produces a list of coins we are interested in and wanting to keep 
 
 This function runs a single pass of the process in which the program downloads and saves the most recent candlesticks data of all the coins in the watchlist countered with the 3 most popular OTC coins (BTC, USDT, and ETH), then updates the new entries with extra indicators, such as SMA 6, MACD, etc.
 
+#### prepare_train_data
+
+This function retrieves data from the database and generates training, validation, and testing data files used for CAPS project to build the deep learning models.

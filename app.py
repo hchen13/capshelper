@@ -53,6 +53,16 @@ def single_run():
             collect(base, counter)
 
 
+def prepare_train_data(path):
+    train_end = datetime(2018, 6, 1, 23, 59).timestamp()
+    valid_end = datetime(2018, 6, 10, 23, 59).timestamp()
+    test_end = datetime.now().timestamp()
+    butler.generate_train_files(path, 'train', end=train_end)
+    butler.generate_train_files(path, 'valid', start=train_end + 1, end=valid_end)
+    butler.generate_train_files(path, 'test', start=valid_end + 1, end=test_end)
+
+
 if __name__ == '__main__':
     # get_watchlist(False)
-    single_run()
+    # single_run()
+    prepare_train_data('data/')
